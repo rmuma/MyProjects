@@ -1,0 +1,348 @@
+import java.util.Scanner;
+public class Play {
+	public static void main(String[] args)
+	{
+		Scanner scan = new Scanner(System.in); 
+		System.out.print("BLACKJACK: Press Enter to Start");
+		scan.nextLine();
+		MoneyTracker.moneyAtStart();//Sets dollar amount at beginning
+		String keepPlaying = ""; 
+		String winLoseOrDraw = "";
+		do 
+		{ // Starts the Hand
+			MoneyTracker.bet();//tracks bet
+			Hand.shuffle();//shuffles deck
+			Hand houseHand = new Hand();
+			Card houseCard = new Card();
+			houseHand.addToHand(houseCard);
+			houseCard = new Card();
+			houseHand.addToHand(houseCard);
+			houseHand.checkForBlackJack(); //First two cards for the house
+
+			Hand myHand = new Hand();
+			Card nextCard = new Card();
+			myHand.addToHand(nextCard);
+			System.out.println("The House's Hand:\n[ ]"+houseCard.name);
+			System.out.println("Your hand:");
+			if (houseHand.blackJack) //if house has blackjack
+			{
+				nextCard = new Card();
+				myHand.addToHand(nextCard);//gives you card and checks for blackjack
+				myHand.checkForBlackJack();
+				System.out.println(myHand.handName);
+				if (myHand.blackJack)//We both have blackJack
+				{
+					winLoseOrDraw = "Draw";
+					System.out.println("You both have BlackJack look at the House's hand:\n" +  houseHand.handName);
+				}
+				else //just house has blackjack
+				{
+					winLoseOrDraw = "Lose";
+					System.out.println("The House has BlackJack look at his hand:\n" +  houseHand.handName);
+				}
+			}
+			else // no Black Jack for the House
+			{
+				do
+				{
+					nextCard = new Card();
+					myHand.addToHand(nextCard);
+					myHand.checkForBlackJack();
+					System.out.println(myHand.handName);
+				}while (!myHand.blackJack && myHand.hitMe()); //stops adding cards if they say stand or bust or have blackjack(bust is implemented in hitme method)
+					if (myHand.blackJack)
+					{		
+						winLoseOrDraw = "Win";
+						System.out.println("BLACKJACK!!!!!!!!!");	
+					}
+					else //We didn't have black jack regular house play
+					{
+						if (myHand.sumOfHand() <= 21) //as long as you didn't bust
+						{
+							if (myHand.hasAce)//If there is an Ace sees if it needs to be 1 or 11;
+							{
+								myHand.addAce();
+							}
+							// Execute the houses hand
+							System.out.print("Hit enter to flip over the House's card");
+							scan.nextLine();
+							System.out.println(houseHand.handName);
+							while(houseHand.sumOfHand() < 17 )//house will hit on anything less than seventeen
+							{
+								if (houseHand.hasAce && houseHand.sumOfHand() + 10 >= 17 && houseHand.sumOfHand() + 10 <= 21)
+								{//makes the ace an eleven if adding it will put you between 17 and 21
+									houseHand.addAce();
+								}
+								else//gives the house a new card 
+								{
+									houseCard = new Card();
+									houseHand.addToHand(houseCard);
+									System.out.print("Hit enter to see the House's next Card");
+									scan.nextLine();
+									System.out.println(houseHand.handName);
+								}
+								if (houseHand.sumOfHand() > 21)//the house busts
+								{
+									winLoseOrDraw = "Win";
+									System.out.println("The House busts, you win the hand!");
+								}
+							}
+							if (myHand.sumOfHand() > houseHand.sumOfHand())//If your hand is higher
+							{
+								winLoseOrDraw = "Win";
+								System.out.println("You Win!");
+							}
+							if (myHand.sumOfHand() < houseHand.sumOfHand() && houseHand.sumOfHand() <= 21)// If the house hand is higher and he didn't bust
+							{
+								winLoseOrDraw = "Lose";
+								System.out.println("You Lose!");
+							}
+							if (myHand.sumOfHand() == houseHand.sumOfHand() )//same score
+							{
+								winLoseOrDraw = "Draw";
+								System.out.println("You finsished with the same score as the house.");
+							}
+						}
+						else//If you have busted
+						{
+							winLoseOrDraw = "Lose";
+						}
+					}
+			}
+			MoneyTracker.endOfHand(winLoseOrDraw);//changes the money you have left appropriately 
+			if (MoneyTracker.moneyLeft != 0)
+			{
+				System.out.println("Would you like to play another hand?");
+				keepPlaying = scan.nextLine();
+			}
+		}while ((keepPlaying.equalsIgnoreCase("yes") || keepPlaying.equalsIgnoreCase("y") || keepPlaying.equals("")) && MoneyTracker.moneyLeft != 0);
+		if (MoneyTracker.moneyLeft != 0 )
+		{
+			System.out.println("Thanks for playing! You left with $" + MoneyTracker.moneyLeft + "!!!");
+		}
+		else 
+		{
+			System.out.println("I'm sorry, you lost all your money. Thank's for playing!");
+		}
+	}
+}
+// Creates the cards 
+public class Card 
+{
+	public String name;
+	public int value;
+	public boolean ace = false;
+	public Card()
+	{	
+		double random = (Math.random() * 52) + 1;
+		int randNum = (int) random;//Random number 1 through 52 for each card
+		while(Hand.alreadyDealt[randNum])//ensures that this card hasn't already been dealt creates a new card if so
+		{
+			random = (Math.random() * 52) + 1;
+			randNum = (int) random;
+		}
+		Hand.alreadyDealt[randNum]= true;//marks this card as used
+		int cardNum = randNum/4 + 1;//card number 1 - 13
+		if (cardNum == 1)
+		{
+			name = "[A" + suit(randNum) + "]";
+			value = 1 ;
+			ace = true;
+		}else if(cardNum<11)
+		{
+			name = "[" + cardNum + suit(randNum) +  "]";
+			value = cardNum;
+		}
+		else 
+		{
+			value = 10;
+			if (cardNum == 11)
+			{
+				name = "[J" + suit(randNum) + "]";
+			}else if (cardNum == 12)
+			{
+				name = "[Q" + suit(randNum) + "]";
+			}// cardNum = 13
+			else name = "[K" + suit(randNum) + "]";
+		}
+	}
+	
+	public String suit(int originalRandNum)//uses the modular to identify the suit
+	{
+		String suit;
+		if (originalRandNum % 4 == 0)//Heart
+		{
+			suit = "\u2665";
+		}
+		else if (originalRandNum % 4 == 1)//Diamond
+		{
+			suit = "\u2666";
+		}
+		else if (originalRandNum % 4 == 2)//Spade
+		{
+			suit = "\u2663";
+		}
+		else//Club
+		{
+			suit = "\u2660";
+		}
+		return suit;
+	}
+}public class Hand
+{
+	public int[] hand = new int[20];
+	//sets all values to zero so I can check them later
+	public String handName = "";
+	public boolean hasAce = false;
+	public static boolean[] alreadyDealt = new boolean[53];
+	public boolean blackJack = false;
+	public int cardCount;
+	
+	public Hand()//creates a hand with no cards in it
+	{
+		for (int i = 0; i < 20; i++)
+		{
+			hand[i] = 0;
+		}
+		hasAce = false;
+		handName = "";
+		cardCount = 0;
+	}
+	
+	public static void shuffle()//resets the deck so no cards are marked as used
+	{
+		for (int i = 0; i < 53; i++)
+		{
+			alreadyDealt[i] = false;
+		}
+	}
+	
+	public int[] addToHand(Card nextCard)//adds a card to your hand
+	{
+		cardCount++;//adds to the card count
+		if (nextCard.ace)//notes an ace in hand
+		{
+			hasAce = true;
+		}
+		int array[] = hand;
+		for(int i = 0 ; i<20; i++)//adds card to the next available index in array
+		{
+			if (array[i] == 0)//if indexed card DNE
+			{ 
+				array[i] = nextCard.value;
+				handName+= nextCard.name;
+				i+=30;//terminates loop
+			}
+		}
+		return array;
+	}
+	
+	//Checks to see if user had bust and if not then sees if user wants to take another card
+	public boolean hitMe()//Hit me or Stand
+	{
+		if (sumOfHand() > 21)//acts as stand if they bust 
+		{
+			System.out.println("BUST");
+			return false;
+		}
+		String decision;
+		Scanner scan = new Scanner(System.in);
+		System.out.println("Hit or Stand");
+		int i = 0;
+		boolean result = false;
+		while(i == 0)//if user selects hit or stand then i changes 
+		{
+			decision = scan.nextLine();
+			if(decision.equalsIgnoreCase("hit") || decision.equalsIgnoreCase("h") || decision.equalsIgnoreCase("hit me"))
+			{
+
+				result = true;
+				i++;
+			}
+			else if (decision.equalsIgnoreCase("stand") || decision.equalsIgnoreCase("s"))
+			{
+
+				result = false;
+				i++;
+			}
+			else
+			{
+			System.out.println("Please enter either hit or stand.");
+			}
+		}
+
+		return result;
+	}
+	public void checkForBlackJack()//If there is an ace and a ten/face card it is a blackjack
+	{
+		if (hasAce && sumOfHand() == 11 && cardCount == 2)
+		blackJack = true;
+	}
+	
+	public int sumOfHand()//totals the cards in the hand
+	{ 
+		int sum = 0;
+		for(int i = 0 ; i<20; i++)
+		{
+			sum += hand[i];
+		}
+		return sum;
+	}
+	public void addAce()// adds the value of ten to a unused index in the hand which makes it like you used 11
+	{		
+		if (sumOfHand() + 10 <= 21)
+		{
+			hand[19]=10; 
+		}
+	}
+}public class MoneyTracker
+{
+	public static int moneyLeft;
+	public static int bet;
+
+	public static void moneyAtStart()
+	{	
+		Scanner scan = new Scanner(System.in);
+		System.out.print("How much money are you bringing to the table? \n$");
+		moneyLeft=scan.nextInt();
+	}
+	public static void bet ()//lets you place a bet more than 0 but no more than what you have left
+	{
+		Scanner scan = new Scanner(System.in);
+		System.out.print("You have $" + moneyLeft + " How Much would like to bet on this hand? \n$");
+		bet = scan.nextInt();
+		while(bet > moneyLeft || bet <=0)
+		{
+			if ( bet < 0 )
+			{
+				System.out.print("Please place a positive bet \n$");
+				bet = scan.nextInt();
+			}
+			else if (bet == 0)
+			{
+				System.out.println("You can't bet 0");
+				bet = scan.nextInt();
+			}
+			else
+			{
+			System.out.print("You don't have that much money left, place a different bet. \n$");
+			bet = scan.nextInt();
+			}
+		}
+		if (bet == moneyLeft)
+		{
+			System.out.println("That's a gutsy move!!!");
+		}
+	}
+	public static void endOfHand(String outcome)//adds money if you win takes away if you didn't
+	{
+		if (outcome.equals("Win"))
+		{
+			moneyLeft+= bet;
+		}
+		if (outcome.equals("Lose"))
+		{
+			moneyLeft-= bet;
+		}
+	}
+}
